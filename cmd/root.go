@@ -54,7 +54,27 @@ var rootCmd = &cobra.Command{
 			{Position: 3, Name: "Charles Leclerc", Gap: "+2.5"},
 		}
 
-		m := ui.NewModelWithData(leaderboard, events, race)
+		// build a fetch function that the UI can use for auto-refresh
+		fetchFn := func(ctx context.Context) ([]models.Driver, []models.Event, models.Race, error) {
+			eventsLive, err := eService.GetRecentEvents(ctx)
+			if err != nil || len(eventsLive) == 0 {
+				// fallback to static events when API fails
+				eventsLive = []models.Event{
+					{Message: "🟡 Yellow Flag"},
+					{Message: "🚗 Safety Car"},
+					{Message: "🟢 Green Flag"},
+				}
+			}
+
+			raceLive, err2 := sService.GetNextRace(ctx)
+			if err2 != nil {
+				raceLive = models.Race{Name: "TBD", Date: ""}
+			}
+
+			return leaderboard, eventsLive, raceLive, nil
+		}
+
+		m := ui.NewLiveModel(fetchFn, 15*time.Second, leaderboard, events, race)
 		p := tea.NewProgram(m)
 		if err := p.Start(); err != nil {
 			return fmt.Errorf("failed to start TUI: %w", err)
