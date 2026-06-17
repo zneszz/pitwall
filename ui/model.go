@@ -14,18 +14,27 @@ type Model struct {
 
 // NewModel returns a Model populated with mock data.
 func NewModel() *Model {
-	return &Model{
-		Leaderboard: []models.Driver{
+	return NewModelWithData(
+		[]models.Driver{
 			{Position: 1, Name: "Max Verstappen", Gap: "+0.0"},
 			{Position: 2, Name: "Lewis Hamilton", Gap: "+1.2"},
 			{Position: 3, Name: "Charles Leclerc", Gap: "+2.5"},
 		},
-		Events: []models.Event{
+		[]models.Event{
 			{Message: "🟡 Yellow Flag"},
 			{Message: "🚗 Safety Car"},
 			{Message: "🟢 Green Flag"},
 		},
-		NextRace: models.Race{Name: "Monaco Grand Prix", Date: "2026-05-31"},
+		models.Race{Name: "Monaco Grand Prix", Date: "2026-05-31"},
+	)
+}
+
+// NewModelWithData constructs a UI model from provided domain data.
+func NewModelWithData(leaderboard []models.Driver, events []models.Event, next models.Race) *Model {
+	return &Model{
+		Leaderboard: leaderboard,
+		Events:      events,
+		NextRace:    next,
 	}
 }
 
