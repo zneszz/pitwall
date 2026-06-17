@@ -43,6 +43,16 @@ func (c *Client) GetRaceControlMessages(ctx context.Context) ([]byte, error) {
 	return c.doRequest(ctx, http.MethodGet, path.Join("race-control", "messages"))
 }
 
+// GetDriverStandings fetches driver standings payload (raw JSON).
+func (c *Client) GetDriverStandings(ctx context.Context) ([]byte, error) {
+	return c.doRequest(ctx, http.MethodGet, path.Join("standings", "drivers"))
+}
+
+// GetTeamStandings fetches team/constructor standings payload (raw JSON).
+func (c *Client) GetTeamStandings(ctx context.Context) ([]byte, error) {
+	return c.doRequest(ctx, http.MethodGet, path.Join("standings", "teams"))
+}
+
 // doRequest executes an HTTP request against the configured base URL and returns the response body.
 func (c *Client) doRequest(ctx context.Context, method, p string) ([]byte, error) {
 	// Build URL relative to base

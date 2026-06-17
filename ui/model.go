@@ -9,13 +9,18 @@ import (
 )
 
 // FetchFunc fetches live domain data. Implemented by the application wiring (cmd).
-type FetchFunc func(ctx context.Context) ([]models.Driver, []models.Event, models.Race, error)
+type FetchFunc func(ctx context.Context) ([]models.Driver, []models.Event, models.Race, []models.DriverStanding, []models.TeamStanding, []models.PastLeader, error)
 
 // Model is the Bubble Tea model for the TUI.
 type Model struct {
 	Leaderboard []models.Driver
 	Events      []models.Event
 	NextRace    models.Race
+
+	// additional data
+	DriverStandings []models.DriverStanding
+	TeamStandings   []models.TeamStanding
+	PastLeaders     []models.PastLeader
 
 	// live refresh
 	fetchFn        FetchFunc
@@ -38,23 +43,27 @@ func NewModel() *Model {
 			{Message: "🟢 Green Flag"},
 		},
 		models.Race{Name: "Monaco Grand Prix", Date: "2026-05-31"},
+		nil, nil, nil,
 	)
 }
 
 // NewModelWithData constructs a UI model from provided domain data.
-func NewModelWithData(leaderboard []models.Driver, events []models.Event, next models.Race) *Model {
+func NewModelWithData(leaderboard []models.Driver, events []models.Event, next models.Race, dStandings []models.DriverStanding, tStandings []models.TeamStanding, leaders []models.PastLeader) *Model {
 	return &Model{
-		Leaderboard: leaderboard,
-		Events:      events,
-		NextRace:    next,
-		Loading:     false,
-		Err:         "",
+		Leaderboard:     leaderboard,
+		Events:          events,
+		NextRace:        next,
+		DriverStandings: dStandings,
+		TeamStandings:   tStandings,
+		PastLeaders:     leaders,
+		Loading:         false,
+		Err:             "",
 	}
 }
 
 // NewLiveModel constructs a Model that will auto-refresh using fetchFn every interval.
-func NewLiveModel(fetchFn FetchFunc, interval time.Duration, leaderboard []models.Driver, events []models.Event, next models.Race) *Model {
-	m := NewModelWithData(leaderboard, events, next)
+func NewLiveModel(fetchFn FetchFunc, interval time.Duration, leaderboard []models.Driver, events []models.Event, next models.Race, dStandings []models.DriverStanding, tStandings []models.TeamStanding, leaders []models.PastLeader) *Model {
+	m := NewModelWithData(leaderboard, events, next, dStandings, tStandings, leaders)
 	m.fetchFn = fetchFn
 	m.refreshInterval = interval
 	return m
@@ -66,6 +75,9 @@ type dataMsg struct {
 	leaders []models.Driver
 	events  []models.Event
 	next    models.Race
+	dStand  []models.DriverStanding
+	tStand  []models.TeamStanding
+	pleads  []models.PastLeader
 }
 
 type errMsg struct{ err error }
@@ -93,6 +105,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Leaderboard = msg.leaders
 		m.Events = msg.events
 		m.NextRace = msg.next
+		m.DriverStandings = msg.dStand
+		m.TeamStandings = msg.tStand
+		m.PastLeaders = msg.pleads
 		m.Loading = false
 		m.Err = ""
 	case errMsg:
@@ -112,10 +127,10 @@ func (m *Model) fetchOnceCmd() tea.Cmd {
 		m.Loading = true
 		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 		defer cancel()
-		leaders, events, next, err := m.fetchFn(ctx)
+		leaders, events, next, dStand, tStand, pleads, err := m.fetchFn(ctx)
 		if err != nil {
 			return errMsg{err}
 		}
-		return dataMsg{leaders: leaders, events: events, next: next}
+		return dataMsg{leaders: leaders, events: events, next: next, dStand: dStand, tStand: tStand, pleads: pleads}
 	}
 }
